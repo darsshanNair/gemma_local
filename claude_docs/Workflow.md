@@ -1,6 +1,6 @@
 # Development Workflow
 
-This document describes reusable development workflow patterns for Claude Code projects. These practices ensure consistent Git usage and collaboration.
+This document describes reusable development workflow patterns for Claude Code projects. These practices ensure consistent Git usage and collaboration. To reuse in other projects, copy this file to a `claude_docs/` directory and add a reference in the project's `CLAUDE.md`.
 
 ## Git Branch Strategy
 
