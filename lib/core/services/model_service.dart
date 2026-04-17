@@ -9,7 +9,7 @@ class ModelService implements IModelService {
   Future<void> init(String hfToken, String url) async {
     await FlutterGemma.initialize(huggingFaceToken: hfToken);
     await FlutterGemma.installModel(
-      modelType: ModelType.gemmaIt,
+      modelType: ModelType.qwen,
     ).fromNetwork(url).install();
   }
 

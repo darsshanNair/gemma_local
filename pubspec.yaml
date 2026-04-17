@@ -12,6 +12,7 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   flutter_gemma: ^0.13.2
+  get_it: ^9.2.1
 
 dev_dependencies:
   flutter_test:

@@ -12,6 +12,7 @@
 .swiftpm/
 migrate_working_dir/
 config.json
+.claude/
 
 # IntelliJ related
 *.iml
