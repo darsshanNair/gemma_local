@@ -90,11 +90,15 @@ Change `modelUrl` and `modelType` (in `ModelService.init`) to use a different mo
 - `config.json` (git‑ignored) contains the `HF_TOKEN` field. Use `--dart-define-from-file=config.json` to pass its values to the app at compile time.
 - Example `config.json` content: `{"HF_TOKEN": "hf_your_token_here"}`
 
+## Development Workflow
+
+For development workflow and Git practices, see [claude_docs/Workflow.md](claude_docs/Workflow.md).
+
 ## Notes
 
-- Requires Flutter SDK ^3.10.0‑290.4.beta (beta channel).
+- Uses FVM with Flutter 3.41.6 (stable channel). The `flutter_gemma` package requires SDK >=3.10.7.
 - The model file is downloaded on first launch (~500 MB) and cached on the device.
 - On emulators the CPU backend is used automatically; responses will be slower than on a physical device with GPU.
 - The `systemInstruction` is set to “You are a helpful assistant.” to discourage markdown in responses.
 - The app does not require an internet connection at inference time.
-- Currently `modelUrl` points to a Qwen2.5‑0.5B‑Instruct model, but `modelType` is set to `ModelType.gemmaIt`; verify compatibility with `flutter_gemma` and update `modelType` if needed.
+- Currently `modelUrl` points to a Qwen2.5‑0.5B‑Instruct model, and `modelType` is correctly set to `ModelType.qwen` in `AppConstants.modelType`.
