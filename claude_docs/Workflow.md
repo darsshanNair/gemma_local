@@ -1,6 +1,6 @@
 # Development Workflow
 
-This document describes reusable development workflow patterns for Claude Code projects. These practices ensure consistent Git usage and collaboration. To reuse in other projects, copy this file to a `claude_docs/` directory and add a reference in the project's `CLAUDE.md`.
+This document describes reusable development workflow patterns for Claude Code projects. These practices ensure consistent Git usage and collaboration.
 
 ## Git Branch Strategy
 
@@ -15,9 +15,3 @@ This document describes reusable development workflow patterns for Claude Code p
 3. Test changes
 4. Commit with descriptive messages
 5. Push branch for review/merge
-
-## Claude Code Usage
-
-- Use `fvm` prefix for Flutter commands (e.g., `fvm flutter pub get`)
-- Follow dependency injection pattern established with GetIt
-- Reference `CLAUDE.md` for project structure and conventions
