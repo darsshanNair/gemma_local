@@ -92,22 +92,7 @@ Change `modelUrl` and `modelType` (in `ModelService.init`) to use a different mo
 
 ## Development Workflow
 
-### Git Branch Strategy
-- **feature/** – New features, enhancements (e.g., `feature/add-user-auth`)
-- **fix/** – Bug fixes (e.g., `fix/login-crash`)
-- **patch/** – Small corrections, dependencies, config changes (e.g., `patch/update-readme`)
-
-### Process
-1. Create appropriate branch before starting changes
-2. Make changes on that branch  
-3. Test changes
-4. Commit with descriptive messages
-5. Push branch for review/merge
-
-### Claude Code Usage
-- Use `fvm` prefix for Flutter commands (e.g., `fvm flutter pub get`)
-- Follow dependency injection pattern established with GetIt
-- Reference `CLAUDE.md` for project structure and conventions
+For development workflow and Git practices, see [claude_docs/Workflow.md](claude_docs/Workflow.md).
 
 ## Notes
 
