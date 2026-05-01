@@ -1,6 +1,8 @@
 import 'package:gemma_local/core/models/todo.dart';
 
-sealed class TodoState {}
+sealed class TodoState {
+  const TodoState();
+}
 
 final class TodoInitial extends TodoState {}
 

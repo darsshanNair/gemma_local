@@ -138,38 +138,34 @@ class _TodoScreenBodyState extends State<_TodoScreenBody> {
     return AppBar(
       backgroundColor: AppColors.surface,
       elevation: 0,
-      title: const Text(
-        AppStrings.todosTitle,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
-        ),
-      ),
-      bottom: BlocBuilder<TodoCubit, TodoState>(
-        builder: (context, state) {
-          final remaining = switch (state) {
-            TodoLoaded(todos: final todos) =>
-              todos.where((t) => !t.isCompleted).length,
-            _ => 0,
-          };
-          return PreferredSize(
-            preferredSize: const Size.fromHeight(20),
-            child: Padding(
-              padding: const EdgeInsets.only(left: 16, bottom: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '$remaining remaining',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            AppStrings.todosTitle,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
             ),
-          );
-        },
+          ),
+          BlocBuilder<TodoCubit, TodoState>(
+            builder: (context, state) {
+              final remaining = switch (state) {
+                TodoLoaded(todos: final todos) =>
+                  todos.where((t) => !t.isCompleted).length,
+                _ => 0,
+              };
+              return Text(
+                '$remaining remaining',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
