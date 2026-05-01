@@ -162,6 +162,8 @@ Todo tap → Edit dialog → user changes title → Cubit.updateTodo(index, titl
 
 ## Dependencies
 
-No new packages required. Uses:
-- `flutter_bloc` (Cubit, BlocProvider, BlocBuilder) — already in pubspec
-- Existing `GetIt` (DI) — already in pubspec
+New packages to add:
+- `flutter_bloc` — for Cubit, BlocProvider, BlocBuilder
+
+Already in pubspec:
+- `GetIt` — dependency injection
