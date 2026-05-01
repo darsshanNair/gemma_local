@@ -10,6 +10,5 @@ class AppStrings {
   static const String emptyTodos = 'No tasks yet. Tap + to add one.';
   static const String typeTask = 'Type a task...';
   static const String editHint = 'Edit task...';
-  static const String somethingWentWrong = 'Something went wrong.';
   static const String retry = 'Retry';
 }
