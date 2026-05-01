@@ -9,9 +9,7 @@ import 'package:gemma_local/presentation/widgets/chat_bubble.dart';
 import 'package:gemma_local/presentation/widgets/send_button.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.title});
-
-  final String title;
+  const ChatScreen({super.key});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -187,7 +185,7 @@ class _ChatScreenState extends State<ChatScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.title,
+                'Gemma AI',
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,

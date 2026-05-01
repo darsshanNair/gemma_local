@@ -10,7 +10,7 @@ class GemmaLocalApp extends StatelessWidget {
       title: 'Gemma Local',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-      home: const ChatScreen(title: 'Gemma AI Assistant'),
+      home: const ChatScreen(),
     );
   }
 }
