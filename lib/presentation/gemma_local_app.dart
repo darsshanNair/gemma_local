@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gemma_local/presentation/screens/chat_screen.dart';
+import 'package:gemma_local/presentation/screens/home_screen.dart';
 
 class GemmaLocalApp extends StatelessWidget {
   const GemmaLocalApp({super.key});
@@ -10,7 +10,7 @@ class GemmaLocalApp extends StatelessWidget {
       title: 'Gemma Local',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-      home: const ChatScreen(),
+      home: const HomeScreen(),
     );
   }
 }
