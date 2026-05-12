@@ -13,6 +13,9 @@ class AppColors {
   static const Color textSecondary = Color(0xFF6B6F85);
   static const Color green = Color(0xFF4CAF82);
   static const Color amber = Color(0xFFFFA040);
+  static const Color purple = Color(0xFF9D7BFF);
+  static const Color pink = Color(0xFFFF7EA0);
+  static const Color blue = Color(0xFF64B5F6);
   static const Color errorBg = Color(0xFF3B1E1E);
   static const Color errorText = Color(0xFFFF6B6B);
 }

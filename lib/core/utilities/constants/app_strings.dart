@@ -10,5 +10,11 @@ class AppStrings {
   static const String emptyTodos = 'No tasks yet. Tap + to add one.';
   static const String typeTask = 'Type a task...';
   static const String editHint = 'Edit task...';
+  static const String category = 'Category';
+  static const String categoryGeneral = 'General';
+  static const String categoryWork = 'Work';
+  static const String categoryPersonal = 'Personal';
+  static const String categoryHealth = 'Health';
+  static const String categoryFinances = 'Finances';
   static const String retry = 'Retry';
 }
