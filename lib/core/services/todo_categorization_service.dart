@@ -26,7 +26,7 @@ class TodoCategorizationService {
         .toList();
 
     final chat = await _model.createChat(
-      systemInstruction: AppConstants.systemInstruction,
+      systemInstruction: AppConstants.categorizationInstruction,
       supportsFunctionCalls: true,
       toolChoice: ToolChoice.required,
       tools: [
@@ -63,9 +63,7 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
       if (response is FunctionCallResponse) {
         final result =
             await _handleToolCall(response, chat, categorized);
-        if (result == true) {
-          // categorized
-        } else if (result == false) {
+        if (result == false) {
           skipped++;
         }
       } else if (response is ParallelFunctionCallResponse) {
