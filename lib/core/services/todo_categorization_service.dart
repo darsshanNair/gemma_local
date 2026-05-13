@@ -1,6 +1,3 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:gemma_local/core/models/categorization_result.dart';
 import 'package:gemma_local/core/models/todo_category.dart';
@@ -62,34 +59,30 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
 
     await chat.addQueryChunk(Message.text(text: prompt, isUser: true));
 
-    try {
-      await for (final response in chat.generateChatResponseAsync()) {
-        if (response is FunctionCallResponse) {
+    await for (final response in chat.generateChatResponseAsync()) {
+      if (response is FunctionCallResponse) {
+        final result =
+            await _handleToolCall(response, chat, categorized);
+        if (result == true) {
+          // categorized
+        } else if (result == false) {
+          skipped++;
+        }
+      } else if (response is ParallelFunctionCallResponse) {
+        for (final call in response.calls) {
           final result =
-              await _handleToolCall(response, chat, categorized);
-          if (result == true) {
-            // categorized
-          } else if (result == false) {
+              await _handleToolCall(call, chat, categorized);
+          if (result == false) {
             skipped++;
-          }
-        } else if (response is ParallelFunctionCallResponse) {
-          for (final call in response.calls) {
-            final result =
-                await _handleToolCall(call, chat, categorized);
-            if (result == false) {
-              skipped++;
-            }
           }
         }
       }
-    } catch (e) {
-      debugPrint('Categorization error: $e');
     }
 
     return CategorizationResult(
       categorized: Map.unmodifiable(categorized),
       skipped: skipped,
-      totalProcessed: generalTodos.length,
+      totalProcessed: categorized.values.fold(0, (a, b) => a + b) + skipped,
     );
   }
 
@@ -152,6 +145,7 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
       return true;
     }
 
+    await _sendToolError(chat, call.name, 'Unknown tool: ${call.name}');
     return false;
   }
 
