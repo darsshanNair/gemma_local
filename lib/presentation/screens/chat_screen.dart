@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:gemma_local/core/di/di_container.dart';
 import 'package:gemma_local/core/models/chat_message.dart';
-import 'package:gemma_local/core/services/i_model_service.dart';
 import 'package:gemma_local/core/utilities/constants/app_constants.dart';
 import 'package:gemma_local/presentation/theme/app_colors.dart';
 import 'package:gemma_local/presentation/widgets/chat_bubble.dart';
@@ -42,7 +41,6 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _inputController.dispose();
     _scrollController.dispose();
-    serviceLocator<IModelService>().closeModel();
     super.dispose();
   }
 

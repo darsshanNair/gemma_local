@@ -13,11 +13,15 @@ void main() async {
   // Get ModelService instance and initialize with token and model URL
   final modelService = serviceLocator<IModelService>();
   await modelService.init(AppConstants.hfToken, AppConstants.modelUrl);
-  final model = await modelService.createAndSetupModel(
-    AppConstants.maxTokens,
-    AppConstants.systemInstruction,
-  );
-  ServiceLocator.registerModel(model);
+  try {
+    final model = await modelService.createAndSetupModel(
+      AppConstants.maxTokens,
+      AppConstants.systemInstruction,
+    );
+    ServiceLocator.registerModel(model);
+  } catch (e) {
+    debugPrint('Failed to create model: $e');
+  }
 
   runApp(const GemmaLocalApp());
 }
