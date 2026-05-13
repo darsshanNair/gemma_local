@@ -17,4 +17,12 @@ class AppStrings {
   static const String categoryHealth = 'Health';
   static const String categoryFinances = 'Finances';
   static const String retry = 'Retry';
+  static const String noTodosToCategorize = 'No todos to categorize';
+  static const String categorizing = 'Categorizing...';
+  static const String categorizationComplete = 'Categorization Complete';
+  static const String categorizationFailed =
+      'Categorization could not be completed';
+  static const String skipped = 'Skipped';
+  static const String ok = 'OK';
+  static const String allTodosRemainInGeneral = 'All todos remain in General';
 }

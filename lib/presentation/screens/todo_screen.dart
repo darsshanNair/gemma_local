@@ -35,6 +35,8 @@ class _TodoScreenBody extends StatefulWidget {
 }
 
 class _TodoScreenBodyState extends State<_TodoScreenBody> {
+  bool _isCategorizing = false;
+
   void _showAddDialog() {
     final controller = TextEditingController();
     TodoCategory? selectedCategory;
@@ -117,45 +119,60 @@ class _TodoScreenBodyState extends State<_TodoScreenBody> {
   }
 
   Future<void> _categorizeTodos(BuildContext context) async {
-    final cubit = context.read<TodoCubit>();
-    final state = cubit.state;
-
-    final generalTodos = switch (state) {
-      TodoLoaded(groupedTodos: final grouped) =>
-        grouped[TodoCategory.general] ?? const [],
-      _ => <Todo>[],
-    };
-
-    if (generalTodos.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No todos to categorize')),
-      );
-      return;
-    }
-
-    _showCategorizingOverlay(context);
-
-    final model = serviceLocator<InferenceModel>();
-    final repository = RepositoryProvider.of<ITodoRepository>(context);
-    final service = TodoCategorizationService(model, repository);
+    if (_isCategorizing) return;
+    _isCategorizing = true;
 
     try {
-      final result = await service.categorizeGeneralTodos();
-      if (!context.mounted) return;
-      Navigator.pop(context); // dismiss overlay
+      final cubit = context.read<TodoCubit>();
+      final state = cubit.state;
 
-      if (result.totalProcessed == 0) {
+      final generalTodos = switch (state) {
+        TodoLoaded(groupedTodos: final grouped) =>
+          grouped[TodoCategory.general] ?? const [],
+        _ => <Todo>[],
+      };
+
+      if (generalTodos.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AppStrings.noTodosToCategorize)),
+        );
         return;
       }
 
-      cubit.loadTodos(); // refresh the UI from repository
-      _showResultDialog(context, result);
-    } catch (e) {
-      if (!context.mounted) return;
-      Navigator.pop(context); // dismiss overlay
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Categorization could not be completed')),
-      );
+      _showCategorizingOverlay(context);
+
+      final model = serviceLocator<InferenceModel>();
+      final repository = RepositoryProvider.of<ITodoRepository>(context);
+      final service = TodoCategorizationService(model, repository);
+
+      try {
+        final result = await service.categorizeGeneralTodos();
+        if (!context.mounted) return;
+        Navigator.pop(context); // dismiss overlay
+
+        if (result.totalProcessed == 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(AppStrings.allTodosRemainInGeneral),
+            ),
+          );
+          return;
+        }
+
+        cubit.loadTodos(); // refresh the UI from repository
+        _showResultDialog(context, result);
+      } catch (e) {
+        debugPrint('Categorization failed: $e');
+        if (!context.mounted) return;
+        Navigator.pop(context); // dismiss overlay
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${AppStrings.categorizationFailed}: $e'),
+          ),
+        );
+      }
+    } finally {
+      _isCategorizing = false;
     }
   }
 
@@ -172,7 +189,7 @@ class _TodoScreenBodyState extends State<_TodoScreenBody> {
               CircularProgressIndicator(color: AppColors.accent),
               SizedBox(height: 16),
               Text(
-                'Categorizing...',
+                AppStrings.categorizing,
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 15,
@@ -191,7 +208,7 @@ class _TodoScreenBodyState extends State<_TodoScreenBody> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: const Text(
-          'Categorization Complete',
+          AppStrings.categorizationComplete,
           style: TextStyle(color: AppColors.textPrimary),
         ),
         content: Column(
@@ -237,7 +254,7 @@ class _TodoScreenBodyState extends State<_TodoScreenBody> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Skipped',
+                      AppStrings.skipped,
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                     Text(
@@ -254,7 +271,7 @@ class _TodoScreenBodyState extends State<_TodoScreenBody> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text(
-              'OK',
+              AppStrings.ok,
               style: TextStyle(color: AppColors.accent),
             ),
           ),
