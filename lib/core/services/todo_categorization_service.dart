@@ -69,14 +69,14 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
               await _handleToolCall(response, chat, categorized);
           if (result == true) {
             // categorized
-          } else {
+          } else if (result == false) {
             skipped++;
           }
         } else if (response is ParallelFunctionCallResponse) {
           for (final call in response.calls) {
             final result =
                 await _handleToolCall(call, chat, categorized);
-            if (result != true) {
+            if (result == false) {
               skipped++;
             }
           }
@@ -93,7 +93,7 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
     );
   }
 
-  Future<bool> _handleToolCall(
+  Future<bool?> _handleToolCall(
     FunctionCallResponse call,
     InferenceChat chat,
     Map<TodoCategory, int> categorized,
@@ -102,12 +102,12 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
       final catName = call.args['category'] as String?;
       if (catName == null) {
         await _sendToolError(chat, 'getByCategory', 'Missing category parameter');
-        return false;
+        return null;
       }
       final category = _parseCategory(catName);
       if (category == null) {
         await _sendToolError(chat, 'getByCategory', 'Invalid category: $catName');
-        return false;
+        return null;
       }
       final todos = _repository.getByCategory(category);
       final result = {
@@ -117,7 +117,7 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
         toolName: 'getByCategory',
         response: result,
       ));
-      return false;
+      return null;
     }
 
     if (call.name == 'updateTodoCategory') {
