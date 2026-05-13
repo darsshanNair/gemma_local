@@ -131,67 +131,6 @@ class TodoCategorizationService {
     return null;
   }
 
-  Future<bool?> _handleToolCall(
-    FunctionCallResponse call,
-    InferenceChat chat,
-    Map<TodoCategory, int> categorized,
-  ) async {
-    if (call.name == 'updateTodoCategory') {
-      final idArg =
-          call.args['todoId'] as String? ?? call.args['id'] as String?;
-      final catName = call.args['category'] as String?;
-
-      if (idArg == null || catName == null) {
-        await _sendToolError(
-          chat,
-          'updateTodoCategory',
-          'Missing todoId or category parameter',
-        );
-        return false;
-      }
-
-      final category = _parseCategory(catName);
-      if (category == null) {
-        await _sendToolError(
-          chat,
-          'updateTodoCategory',
-          'Invalid category: $catName',
-        );
-        return false;
-      }
-
-      // Try UUID lookup first, then fall back to title match
-      var existing = _repository.getById(idArg);
-      existing ??= _repository.getAll().cast<Todo?>().firstWhere(
-        (t) => t?.title.toLowerCase() == idArg.toLowerCase(),
-        orElse: () => null,
-      );
-
-      if (existing == null) {
-        await _sendToolError(
-          chat,
-          'updateTodoCategory',
-          'Todo not found: $idArg',
-        );
-        return false;
-      }
-
-      _repository.update(existing.id, existing.copyWith(category: category));
-      categorized[category] = (categorized[category] ?? 0) + 1;
-
-      await chat.addQueryChunk(
-        Message.toolResponse(
-          toolName: 'updateTodoCategory',
-          response: {'success': true},
-        ),
-      );
-      return true;
-    }
-
-    await _sendToolError(chat, call.name, 'Unknown tool: ${call.name}');
-    return false;
-  }
-
   Future<void> _sendToolError(
     InferenceChat chat,
     String toolName,
@@ -209,26 +148,6 @@ class TodoCategorizationService {
     return TodoCategory.values.cast<TodoCategory?>().firstWhere(
       (c) => c?.name == name,
       orElse: () => null,
-    );
-  }
-
-  Tool _buildGetByCategoryTool(List<TodoCategory> targetCategories) {
-    final categoryNames = targetCategories.map((c) => c.name).toList();
-    return Tool(
-      name: 'getByCategory',
-      description:
-          'Get todos from a specific category. Call this if you need to see what is already in a category before moving items there.',
-      parameters: {
-        'type': 'object',
-        'properties': {
-          'category': {
-            'type': 'string',
-            'enum': categoryNames,
-            'description': 'The category name to get todos from',
-          },
-        },
-        'required': ['category'],
-      },
     );
   }
 
