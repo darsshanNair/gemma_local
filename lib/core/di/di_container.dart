@@ -1,3 +1,4 @@
+import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:get_it/get_it.dart';
 import '../services/i_model_service.dart';
 import '../services/i_todo_repository.dart';
@@ -18,5 +19,9 @@ class ServiceLocator {
     serviceLocator.registerLazySingleton<ITodoRepository>(
       () => TodoRepository(),
     );
+  }
+
+  static void registerModel(InferenceModel model) {
+    serviceLocator.registerSingleton<InferenceModel>(model);
   }
 }

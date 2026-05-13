@@ -50,10 +50,7 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       setState(() => _statusText = 'Loading model...');
 
-      _model = await serviceLocator<IModelService>().createAndSetupModel(
-        AppConstants.maxTokens,
-        AppConstants.systemInstruction,
-      );
+      _model = serviceLocator<InferenceModel>();
 
       _chat = await _model!.createChat(
         systemInstruction: AppConstants.systemInstruction,
