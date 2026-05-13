@@ -59,22 +59,30 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
 
     await chat.addQueryChunk(Message.text(text: prompt, isUser: true));
 
-    await for (final response in chat.generateChatResponseAsync()) {
-      if (response is FunctionCallResponse) {
-        final result =
-            await _handleToolCall(response, chat, categorized);
+    const maxTurns = 3;
+    var turn = 0;
+
+    while (turn < maxTurns) {
+      final pendingCalls = <FunctionCallResponse>[];
+
+      await for (final response in chat.generateChatResponseAsync()) {
+        if (response is FunctionCallResponse) {
+          pendingCalls.add(response);
+        } else if (response is ParallelFunctionCallResponse) {
+          pendingCalls.addAll(response.calls);
+        }
+      }
+
+      if (pendingCalls.isEmpty) break;
+
+      for (final call in pendingCalls) {
+        final result = await _handleToolCall(call, chat, categorized);
         if (result == false) {
           skipped++;
         }
-      } else if (response is ParallelFunctionCallResponse) {
-        for (final call in response.calls) {
-          final result =
-              await _handleToolCall(call, chat, categorized);
-          if (result == false) {
-            skipped++;
-          }
-        }
       }
+
+      turn++;
     }
 
     return CategorizationResult(
