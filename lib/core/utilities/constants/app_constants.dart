@@ -7,14 +7,14 @@ class AppConstants {
   static const String systemInstruction = "You are a helpful assistant.";
 
   static const String categorizationInstruction = '''
-You are a todo list assistant. You can help categorize tasks.
+You are a categorization tool. Your ONLY job is to call the updateTodoCategory function for each todo you are given.
 
-When asked to categorize todos:
-1. Read each todo's title carefully
-2. Assign it to the most appropriate category based on the task content
-3. Only use the available categories provided to you
-4. If you are unsure which category fits, leave it as General
-5. Do not make up new categories
+Rules:
+- You MUST call updateTodoCategory for every todo in the list
+- Choose the best matching category from the enum values
+- Do NOT respond with text — only function calls
+- Do NOT call getByCategory — the todos are already provided to you
+- Process ALL todos before finishing
 ''';
   static const int maxTokens = 20000;
   static const ModelType modelType = ModelType.qwen;

@@ -1,5 +1,6 @@
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:gemma_local/core/models/categorization_result.dart';
+import 'package:gemma_local/core/models/todo.dart';
 import 'package:gemma_local/core/models/todo_category.dart';
 import 'package:gemma_local/core/services/i_todo_repository.dart';
 import 'package:gemma_local/core/utilities/constants/app_constants.dart';
@@ -12,7 +13,6 @@ class TodoCategorizationService {
 
   Future<CategorizationResult> categorizeGeneralTodos() async {
     final generalTodos = _repository.getByCategory(TodoCategory.general);
-
     if (generalTodos.isEmpty) {
       return const CategorizationResult(
         categorized: {},
@@ -25,44 +25,52 @@ class TodoCategorizationService {
         .where((c) => c != TodoCategory.general)
         .toList();
 
+    final categorized = <TodoCategory, int>{};
+    var skipped = 0;
+
+    for (final todo in generalTodos) {
+      final result = await _categorizeSingleTodo(todo, targetCategories);
+      if (result != null) {
+        categorized[result] = (categorized[result] ?? 0) + 1;
+      } else {
+        skipped++;
+      }
+    }
+
+    return CategorizationResult(
+      categorized: Map.unmodifiable(categorized),
+      skipped: skipped,
+      totalProcessed: categorized.values.fold(0, (a, b) => a + b) + skipped,
+    );
+  }
+
+  Future<TodoCategory?> _categorizeSingleTodo(
+    Todo todo,
+    List<TodoCategory> targetCategories,
+  ) async {
     final chat = await _model.createChat(
       systemInstruction: AppConstants.categorizationInstruction,
       supportsFunctionCalls: true,
       toolChoice: ToolChoice.required,
-      tools: [
-        _buildGetByCategoryTool(targetCategories),
-        _buildUpdateTodoCategoryTool(targetCategories),
-      ],
+      tools: [_buildUpdateTodoCategoryTool(targetCategories)],
     );
 
-    final todosList = generalTodos
-        .map((t) => '  ID: ${t.id} — "${t.title}"')
-        .join('\n');
-    final categoriesList =
-        targetCategories.map((c) => '  - ${c.name} (${c.displayName})').join('\n');
+    final categoriesList = targetCategories.map((c) => c.name).join(', ');
 
-    final prompt = '''
-Please categorize the following todos that are currently under "General".
-Available categories (other than General):
-$categoriesList
+    final prompt =
+        '''
+          Call updateTodoCategory for this todo.
 
-Todos to categorize:
-$todosList
+          Categories: $categoriesList
 
-Use the getByCategory tool if you need to see what's already in each category.
-Use the updateTodoCategory tool to assign a category to each todo.
-Do not categorize todos that clearly belong in General. Use your best judgment.
-''';
-
-    final categorized = <TodoCategory, int>{};
-    var skipped = 0;
+          Todo:
+          {"todoId": "${todo.id}", "title": "${todo.title}"}
+        ''';
 
     await chat.addQueryChunk(Message.text(text: prompt, isUser: true));
 
-    const maxTurns = 3;
-    var turn = 0;
-
-    while (turn < maxTurns) {
+    const maxTurns = 2;
+    for (var turn = 0; turn < maxTurns; turn++) {
       final pendingCalls = <FunctionCallResponse>[];
 
       await for (final response in chat.generateChatResponseAsync()) {
@@ -76,20 +84,51 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
       if (pendingCalls.isEmpty) break;
 
       for (final call in pendingCalls) {
-        final result = await _handleToolCall(call, chat, categorized);
-        if (result == false) {
-          skipped++;
+        if (call.name == 'updateTodoCategory') {
+          final idArg =
+              call.args['todoId'] as String? ?? call.args['id'] as String?;
+          final catName = call.args['category'] as String?;
+
+          final category = catName != null ? _parseCategory(catName) : null;
+          if (category == null || idArg == null) {
+            await _sendToolError(chat, 'updateTodoCategory', 'Invalid args');
+            continue;
+          }
+
+          // UUID match first, title fallback
+          var existing = _repository.getById(idArg);
+          existing ??= _repository.getAll().cast<Todo?>().firstWhere(
+            (t) => t?.title.toLowerCase() == idArg.toLowerCase(),
+            orElse: () => null,
+          );
+
+          if (existing == null) {
+            await _sendToolError(
+              chat,
+              'updateTodoCategory',
+              'Not found: $idArg',
+            );
+            continue;
+          }
+
+          _repository.update(
+            existing.id,
+            existing.copyWith(category: category),
+          );
+
+          await chat.addQueryChunk(
+            Message.toolResponse(
+              toolName: 'updateTodoCategory',
+              response: {'success': true},
+            ),
+          );
+
+          return category;
         }
       }
-
-      turn++;
     }
 
-    return CategorizationResult(
-      categorized: Map.unmodifiable(categorized),
-      skipped: skipped,
-      totalProcessed: categorized.values.fold(0, (a, b) => a + b) + skipped,
-    );
+    return null;
   }
 
   Future<bool?> _handleToolCall(
@@ -97,57 +136,55 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
     InferenceChat chat,
     Map<TodoCategory, int> categorized,
   ) async {
-    if (call.name == 'getByCategory') {
-      final catName = call.args['category'] as String?;
-      if (catName == null) {
-        await _sendToolError(chat, 'getByCategory', 'Missing category parameter');
-        return null;
-      }
-      final category = _parseCategory(catName);
-      if (category == null) {
-        await _sendToolError(chat, 'getByCategory', 'Invalid category: $catName');
-        return null;
-      }
-      final todos = _repository.getByCategory(category);
-      final result = {
-        'todos': todos.map((t) => {'id': t.id, 'title': t.title}).toList(),
-      };
-      await chat.addQueryChunk(Message.toolResponse(
-        toolName: 'getByCategory',
-        response: result,
-      ));
-      return null;
-    }
-
     if (call.name == 'updateTodoCategory') {
-      final id = call.args['id'] as String?;
+      final idArg =
+          call.args['todoId'] as String? ?? call.args['id'] as String?;
       final catName = call.args['category'] as String?;
-      if (id == null || catName == null) {
+
+      if (idArg == null || catName == null) {
         await _sendToolError(
-            chat, 'updateTodoCategory', 'Missing id or category parameter');
-        return false;
-      }
-      final category = _parseCategory(catName);
-      if (category == null) {
-        await _sendToolError(
-            chat, 'updateTodoCategory', 'Invalid category: $catName');
+          chat,
+          'updateTodoCategory',
+          'Missing todoId or category parameter',
+        );
         return false;
       }
 
-      final existing = _repository.getById(id);
+      final category = _parseCategory(catName);
+      if (category == null) {
+        await _sendToolError(
+          chat,
+          'updateTodoCategory',
+          'Invalid category: $catName',
+        );
+        return false;
+      }
+
+      // Try UUID lookup first, then fall back to title match
+      var existing = _repository.getById(idArg);
+      existing ??= _repository.getAll().cast<Todo?>().firstWhere(
+        (t) => t?.title.toLowerCase() == idArg.toLowerCase(),
+        orElse: () => null,
+      );
+
       if (existing == null) {
         await _sendToolError(
-            chat, 'updateTodoCategory', 'Todo not found: $id');
+          chat,
+          'updateTodoCategory',
+          'Todo not found: $idArg',
+        );
         return false;
       }
 
-      _repository.update(id, existing.copyWith(category: category));
+      _repository.update(existing.id, existing.copyWith(category: category));
       categorized[category] = (categorized[category] ?? 0) + 1;
 
-      await chat.addQueryChunk(Message.toolResponse(
-        toolName: 'updateTodoCategory',
-        response: {'success': true},
-      ));
+      await chat.addQueryChunk(
+        Message.toolResponse(
+          toolName: 'updateTodoCategory',
+          response: {'success': true},
+        ),
+      );
       return true;
     }
 
@@ -156,18 +193,23 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
   }
 
   Future<void> _sendToolError(
-      InferenceChat chat, String toolName, String error) async {
-    await chat.addQueryChunk(Message.toolResponse(
-      toolName: toolName,
-      response: {'success': false, 'error': error},
-    ));
+    InferenceChat chat,
+    String toolName,
+    String error,
+  ) async {
+    await chat.addQueryChunk(
+      Message.toolResponse(
+        toolName: toolName,
+        response: {'success': false, 'error': error},
+      ),
+    );
   }
 
   TodoCategory? _parseCategory(String name) {
     return TodoCategory.values.cast<TodoCategory?>().firstWhere(
-          (c) => c?.name == name,
-          orElse: () => null,
-        );
+      (c) => c?.name == name,
+      orElse: () => null,
+    );
   }
 
   Tool _buildGetByCategoryTool(List<TodoCategory> targetCategories) {
@@ -194,22 +236,21 @@ Do not categorize todos that clearly belong in General. Use your best judgment.
     final categoryNames = targetCategories.map((c) => c.name).toList();
     return Tool(
       name: 'updateTodoCategory',
-      description:
-          'Update the category of a todo item. Use this to move a todo from General to a more specific category.',
+      description: 'Update the category of a todo item.',
       parameters: {
         'type': 'object',
         'properties': {
-          'id': {
+          'todoId': {
             'type': 'string',
-            'description': 'The ID of the todo to update',
+            'description': 'The todoId of the todo to update (the UUID string)',
           },
           'category': {
             'type': 'string',
             'enum': categoryNames,
-            'description': 'The new category to assign to the todo',
+            'description': 'The new category to assign',
           },
         },
-        'required': ['id', 'category'],
+        'required': ['todoId', 'category'],
       },
     );
   }
