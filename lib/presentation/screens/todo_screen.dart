@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_gemma/flutter_gemma.dart';
+import 'package:gemma_local/core/di/di_container.dart';
+import 'package:gemma_local/core/models/categorization_result.dart';
+import 'package:gemma_local/core/models/todo.dart';
 import 'package:gemma_local/core/models/todo_category.dart';
 import 'package:gemma_local/core/services/i_todo_repository.dart';
+import 'package:gemma_local/core/services/todo_categorization_service.dart';
 import 'package:gemma_local/core/utilities/constants/app_strings.dart';
 import 'package:gemma_local/presentation/bloc/cubits/todo_cubit.dart';
 import 'package:gemma_local/presentation/bloc/states/todo_state.dart';
@@ -111,15 +116,175 @@ class _TodoScreenBodyState extends State<_TodoScreenBody> {
     );
   }
 
+  Future<void> _categorizeTodos(BuildContext context) async {
+    final cubit = context.read<TodoCubit>();
+    final state = cubit.state;
+
+    final generalTodos = switch (state) {
+      TodoLoaded(groupedTodos: final grouped) =>
+        grouped[TodoCategory.general] ?? const [],
+      _ => <Todo>[],
+    };
+
+    if (generalTodos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No todos to categorize')),
+      );
+      return;
+    }
+
+    _showCategorizingOverlay(context);
+
+    final model = serviceLocator<InferenceModel>();
+    final repository = RepositoryProvider.of<ITodoRepository>(context);
+    final service = TodoCategorizationService(model, repository);
+
+    try {
+      final result = await service.categorizeGeneralTodos();
+      if (!context.mounted) return;
+      Navigator.pop(context); // dismiss overlay
+
+      if (result.totalProcessed == 0) {
+        return;
+      }
+
+      cubit.loadTodos(); // refresh the UI from repository
+      _showResultDialog(context, result);
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // dismiss overlay
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Categorization could not be completed')),
+      );
+    }
+  }
+
+  void _showCategorizingOverlay(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: AppColors.accent),
+              SizedBox(height: 16),
+              Text(
+                'Categorizing...',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showResultDialog(BuildContext context, CategorizationResult result) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Categorization Complete',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ...result.categorized.entries.map(
+              (e) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: e.key.color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        Text(
+                          e.key.displayName,
+                          style: const TextStyle(color: AppColors.textPrimary),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${e.value}',
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (result.skipped > 0) ...[
+              const Divider(color: AppColors.textSecondary),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Skipped',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                    Text(
+                      '${result.skipped}',
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'OK',
+              style: TextStyle(color: AppColors.accent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: _buildAppBar(),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.accent,
-        onPressed: _showAddDialog,
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'categorize',
+            backgroundColor: AppColors.accent,
+            onPressed: () => _categorizeTodos(context),
+            child: const Icon(Icons.psychology, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'add',
+            backgroundColor: AppColors.accent,
+            onPressed: _showAddDialog,
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+        ],
       ),
       body: BlocBuilder<TodoCubit, TodoState>(
         builder: (context, state) {
